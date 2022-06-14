@@ -1,0 +1,12 @@
+version = 0.1
+[dev]
+[dev.deploy]
+[dev.deploy.parameters]
+stack_name = "streaming-dev"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-1i3qjlmw8hvw5"
+s3_prefix = "streaming-dev"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+image_repositories = []
+profile = "medalist"

@@ -5,13 +5,44 @@ Description: >
 
   Sample SAM Template for streaming media pipeline
 
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
     Timeout: 3
 
 Resources:
-  content-delivery-handler:
+## S3 Buckets
+
+  ContentDeliveryBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join [ '-' , [!Ref AWS::StackName, content-delivery ] ]
+      AccessControl: Private
+      LifecycleConfiguration:
+        Rules:
+          - Id: delete-14days
+            Status: Enabled
+            ExpirationInDays: 14
+
+  LibraryBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join [ '-' , [!Ref AWS::StackName, library ] ]
+      AccessControl: Private
+      #todo - archive to Glacier after X days
+    
+  EncodesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join [ '-' , [!Ref AWS::StackName, encodes ] ]
+      AccessControl: Private
+      
+  ContentDeliveryHandler:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
       CodeUri: content-delivery-handler/
@@ -23,10 +54,10 @@ Resources:
         ReceivedFileEvent:
           Type: S3
           Properties:
-            Bucket: !Ref content-delivery-bucket
+            Bucket: !Ref ContentDeliveryBucket
             Events: s3:ObjectCreated:*
 
-  ingest-content:
+  IngestContent:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
       CodeUri: ingest-content/
@@ -41,33 +72,6 @@ Resources:
             Path: '/content/ingest'
             Method: post
 
-  content-delivery-bucket:
-    Type: AWS::S3::Bucket
-    BucketName: content-delivery-bucket
-    Properties:
-      AccessControl: Private
-      LifecycleConfiguration:
-        Rules:
-          - Id: delete-14days
-            Status: Enabled
-            ExpirationInDays: 14
-  
-  library-bucket:
-    Type: AWS::S3::Bucket
-    BucketName: library-bucket
-    Properties:
-      AccessControl: Private
-      #todo - archive to Glacier after X days
-    
-  encodes-bucket:
-    Type: AWS::S3::Bucket
-    BucketName: encodes-bucket
-    Properties:
-      AccessControl: Private
-  
-
-
-
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
@@ -75,9 +79,9 @@ Outputs:
   HelloWorldApi:
     Description: "API Gateway endpoint URL for Prod stage for Hello World function"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  HelloWorldFunction:
+  ContentDeliveryHandlerFunction:
     Description: "Hello World Lambda Function ARN"
-    Value: !GetAtt content-delivery-handler.Arn
-  HelloWorldFunctionIamRole:
+    Value: !GetAtt ContentDeliveryHandler.Arn
+  ContentDeliveryHandlerIamRole:
     Description: "Implicit IAM Role created for Hello World function"
-    Value: !GetAtt HelloWorldFunctionRole.Arn
+    Value: !GetAtt ContentDeliveryHandlerRole.Arn
